@@ -1,1 +1,176 @@
-/* You can add global styles to this file, and also import other style files */
+// Tailwind CSS directives
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Global CSS custom properties
+:root {
+  --color-bg: #0d0d0f;
+  --color-surface-100: #141417;
+  --color-surface-200: #1a1a1f;
+  --color-surface-300: #222228;
+  --color-surface-400: #2a2a33;
+  --color-accent: #6c63ff;
+  --color-accent-light: #8b84ff;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-text-primary: #f1f1f3;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+  --color-border: rgba(255, 255, 255, 0.08);
+  --bottom-nav-height: 72px;
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+// Base resets
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  height: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  height: 100%;
+  margin: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
+  overflow-x: hidden;
+}
+
+// Scrollbar styling
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-surface-100);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-400);
+  border-radius: 2px;
+}
+
+// Utility classes
+@layer components {
+  .page-container {
+    @apply flex flex-col min-h-screen;
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom));
+  }
+
+  .page-scroll {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  .card {
+    @apply rounded-2xl border;
+    background: var(--color-surface-200);
+    border-color: var(--color-border);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .card-interactive {
+    @apply card transition-all duration-200;
+    &:hover {
+      @apply -translate-y-0.5;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    }
+    &:active {
+      @apply translate-y-0;
+    }
+  }
+
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all duration-200;
+    background: linear-gradient(135deg, var(--color-accent), #5249e5);
+    color: white;
+    box-shadow: 0 4px 16px rgba(108, 99, 255, 0.35);
+
+    &:hover:not(:disabled) {
+      box-shadow: 0 6px 24px rgba(108, 99, 255, 0.5);
+      transform: translateY(-1px);
+    }
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+    &:disabled {
+      @apply opacity-50 cursor-not-allowed;
+    }
+  }
+
+  .btn-secondary {
+    @apply flex items-center justify-center gap-2 py-3 px-5 rounded-xl font-medium text-sm transition-all duration-200;
+    background: var(--color-surface-300);
+    color: var(--color-text-primary);
+    border: 1px solid var(--color-border);
+
+    &:hover:not(:disabled) {
+      background: var(--color-surface-400);
+    }
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+
+  .badge-accent {
+    @apply badge;
+    background: rgba(108, 99, 255, 0.15);
+    color: var(--color-accent-light);
+    border: 1px solid rgba(108, 99, 255, 0.25);
+  }
+
+  .badge-success {
+    @apply badge;
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.25);
+  }
+
+  .section-header {
+    @apply text-lg font-semibold mb-3;
+    color: var(--color-text-primary);
+  }
+
+  .text-muted {
+    color: var(--color-text-muted);
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--color-border);
+    @apply my-4;
+  }
+
+  .glass {
+    background: rgba(26, 26, 31, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--color-border);
+  }
+}
+
+// Animations
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-200) 25%,
+    var(--color-surface-300) 50%,
+    var(--color-surface-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  @apply rounded-lg;
+}
