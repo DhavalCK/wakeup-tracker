@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal, OnInit, OnDestroy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { SleepService } from '../../core/services/sleep.service';
@@ -8,549 +8,180 @@ import { SleepService } from '../../core/services/sleep.service';
   standalone: true,
   imports: [DatePipe],
   template: `
-    <div class="page-container">
-      <div class="page-scroll dashboard">
-
-        <!-- Header -->
-        <header class="dashboard-header">
-          <div class="header-left">
-            <p class="header-date">{{ today | date:'EEEE, MMMM d' }}</p>
-            <h1 class="header-greeting">{{ greeting() }},<br><span class="header-name">{{ userName() }}</span> 👋</h1>
+    <div class="page-container bg-radial-ethereal">
+      <div class="content-scroll">
+        
+        <!-- Premium Header Area -->
+        <header class="flex items-start justify-between mb-12 animate-fade-in">
+          <div class="space-y-1">
+            <p class="text-premium-muted uppercase tracking-[0.2em]">{{ currentTime() | date:'EEEE, MMM d' }}</p>
+            <h1 class="title-large">
+              {{ greeting() }},<br/>
+              <span class="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">
+                {{ userName() }}
+              </span>
+            </h1>
           </div>
-          <button class="avatar-btn" aria-label="Profile">
-            <div class="avatar">
-              <span class="material-symbols-rounded">person</span>
-            </div>
-            <div class="avatar-ring"></div>
-          </button>
+          <div class="profile-frame">
+             <span class="material-symbols-rounded text-indigo-400">person</span>
+          </div>
         </header>
 
-        <!-- Sleep Status Card -->
-        <section class="section">
-          <div class="sleep-status-card" [class.sleeping]="sleepService.isSleeping()">
-            <div class="sleep-status-card__bg"></div>
-            <div class="sleep-status-card__content">
-              <div class="sleep-status-icon">
-                <span class="material-symbols-rounded status-icon">
-                  {{ sleepService.isSleeping() ? 'bedtime' : 'alarm' }}
+        <!-- Live Clock & Focal Point -->
+        <div class="flex flex-col items-center justify-center py-8 space-y-12">
+          
+          <div class="clock-focal animate-float">
+            <div class="clock-bg-blur"></div>
+            <div class="clock-display">
+              <span class="time-digits">{{ currentTime() | date:'h:mm' }}</span>
+              <span class="time-period">{{ currentTime() | date:'a' }}</span>
+            </div>
+            <p class="clock-status">{{ sleepService.isSleeping() ? 'NIGHT MODE ACTIVE' : 'DAY MODE ACTIVE' }}</p>
+          </div>
+
+          <!-- Master Action Button -->
+          <div class="relative group">
+            <div class="absolute inset-0 rounded-full bg-indigo-500/20 blur-3xl group-hover:bg-indigo-500/40 transition-all duration-700"></div>
+            <button 
+              (click)="toggleSleep()"
+              class="btn-master z-10"
+              [class.btn-wakeup]="sleepService.isSleeping()"
+            >
+              <div class="flex flex-col items-center space-y-2">
+                <span class="material-symbols-rounded text-5xl">
+                   {{ sleepService.isSleeping() ? 'wb_sunny' : 'nightlight' }}
+                </span>
+                <span class="font-bold tracking-widest text-xs uppercase">
+                  {{ sleepService.isSleeping() ? 'Wake Up' : 'Rest' }}
                 </span>
               </div>
-              <div class="sleep-status-info">
-                <h2 class="sleep-status-label">
-                  {{ sleepService.isSleeping() ? 'Currently Sleeping' : 'Awake & Ready' }}
-                </h2>
-                @if (sleepService.isSleeping() && sleepService.sleepStartTime()) {
-                  <p class="sleep-status-sublabel">
-                    Since {{ sleepService.sleepStartTime() | date:'h:mm a' }}
-                  </p>
-                } @else {
-                  <p class="sleep-status-sublabel">Track your next sleep session</p>
-                }
-              </div>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- Dashboard Intelligence Section -->
+        <section class="mt-16 space-y-6">
+          <div class="flex items-end justify-between">
+            <h2 class="text-lg font-bold tracking-tight">Today's Pulse</h2>
+            <span class="text-xs font-bold text-indigo-400/80 tracking-widest uppercase">Live View</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Sleep Health Card -->
+            <div class="glass-card flex flex-col justify-between min-h-[140px] relative overflow-hidden group">
+               <div class="absolute -right-4 -top-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl group-hover:bg-indigo-500/20 transition-all"></div>
+               <span class="material-symbols-rounded text-indigo-400/60 mb-4">analytics</span>
+               <div>
+                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Avg Depth</p>
+                 <h3 class="text-xl font-bold">8h 12m</h3>
+               </div>
             </div>
 
-            <!-- Main action button -->
-            @if (sleepService.isSleeping()) {
-              <button class="wakeup-btn" (click)="logWakeup()">
-                <span class="material-symbols-rounded">alarm</span>
-                Log Wakeup
-              </button>
-            } @else {
-              <button class="sleep-btn" (click)="startSleep()">
-                <span class="material-symbols-rounded">bedtime</span>
-                Start Sleep
-              </button>
-            }
+            <!-- Heart Rate / Vitals Placeholder Card -->
+            <div class="glass-card flex flex-col justify-between min-h-[140px] relative overflow-hidden group">
+               <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all"></div>
+               <span class="material-symbols-rounded text-emerald-400/60 mb-4">monitoring</span>
+               <div>
+                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Recovery</p>
+                 <h3 class="text-xl font-bold">92%</h3>
+               </div>
+            </div>
           </div>
-        </section>
 
-        <!-- Quick Stats -->
-        <section class="section">
-          <h2 class="section-header">Overview</h2>
-          <div class="stats-grid">
-            @for (stat of statsCards(); track stat.label) {
-              <div class="stat-card card">
-                <div class="stat-card__icon" [style.background]="stat.iconBg">
-                  <span class="material-symbols-rounded" [style.color]="stat.iconColor">{{ stat.icon }}</span>
+          <!-- Timeline Summary Card -->
+          <div class="glass-card mt-4 p-5 flex items-center gap-6">
+            <div class="flex-1 space-y-3">
+              <h4 class="text-sm font-bold text-slate-200">Session in progress</h4>
+              <div class="flex items-center gap-2">
+                <div class="w-full bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-indigo-500 h-full w-2/3 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
                 </div>
-                <div class="stat-card__value">{{ stat.value }}</div>
-                <div class="stat-card__label">{{ stat.label }}</div>
+                <span class="text-[10px] font-bold text-slate-500">62%</span>
               </div>
-            }
-          </div>
-        </section>
-
-        <!-- Tonight's Goal -->
-        <section class="section">
-          <h2 class="section-header">Tonight's Goal</h2>
-          <div class="goal-card card">
-            <div class="goal-card__header">
-              <div class="goal-icon">
-                <span class="material-symbols-rounded">target</span>
-              </div>
-              <div>
-                <div class="goal-title">8 Hours of Sleep</div>
-                <div class="goal-subtitle">Recommended for adults</div>
-              </div>
-              <span class="badge badge-accent">Tonight</span>
             </div>
-            <div class="goal-progress-bar">
-              <div class="goal-progress-bar__fill" style="width: 0%"></div>
-            </div>
-            <div class="goal-progress-labels">
-              <span>0h 0m logged</span>
-              <span>Goal: 8h</span>
+            <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+               <span class="material-symbols-rounded">more_time</span>
             </div>
           </div>
         </section>
 
-        <!-- Recent Sessions -->
-        <section class="section">
-          <div class="section-row">
-            <h2 class="section-header" style="margin-bottom: 0">Recent Sessions</h2>
-            <a class="view-all-btn" href="/history">View all</a>
-          </div>
-
-          @if (sleepService.entries().length === 0) {
-            <div class="empty-state card">
-              <span class="material-symbols-rounded empty-state__icon">bedtime</span>
-              <p class="empty-state__text">No sleep sessions yet.</p>
-              <p class="empty-state__sub">Tap "Start Sleep" to begin tracking!</p>
-            </div>
-          } @else {
-            @for (entry of sleepService.entries().slice(0, 3); track entry.id) {
-              <div class="session-card card-interactive">
-                <div class="session-icon">
-                  <span class="material-symbols-rounded">bedtime</span>
-                </div>
-                <div class="session-info">
-                  <div class="session-date">{{ entry.wakeupTime | date:'MMM d' }}</div>
-                  <div class="session-times">
-                    {{ entry.sleepTime | date:'h:mm a' }} → {{ entry.wakeupTime | date:'h:mm a' }}
-                  </div>
-                </div>
-                <div class="session-duration badge-success badge">
-                  {{ formatDuration(entry.durationMinutes) }}
-                </div>
-              </div>
-            }
-          }
-        </section>
-
-        <!-- Bottom padding for nav -->
-        <div style="height: 16px;"></div>
       </div>
     </div>
   `,
   styles: [`
-    .dashboard {
-      padding: 0;
-      background: #0d0d0f;
+    .bg-radial-ethereal {
+      background: radial-gradient(circle at 50% -20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 0% 100%, rgba(16, 185, 129, 0.05) 0%, transparent 40%),
+                  var(--color-bg);
     }
 
-    /* Header */
-    .dashboard-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      padding: 56px 20px 20px;
-      background: linear-gradient(180deg, rgba(108,99,255,0.06) 0%, transparent 100%);
+    .profile-frame {
+      @apply w-12 h-12 rounded-2xl flex items-center justify-center border border-white/5;
+      background: rgba(255, 255, 255, 0.03);
     }
 
-    .header-date {
-      font-size: 12px;
-      color: #9ca3af;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin: 0 0 4px;
+    /* Clock Focal Point */
+    .clock-focal {
+      @apply relative flex flex-col items-center justify-center text-center p-8;
     }
 
-    .header-greeting {
-      font-size: 22px;
-      font-weight: 700;
-      line-height: 1.3;
-      margin: 0;
-      color: #f1f1f3;
+    .clock-bg-blur {
+      @apply absolute inset-0 blur-3xl opacity-10 bg-indigo-500 scale-150;
+      z-index: -1;
     }
 
-    .header-name {
-      color: #8b84ff;
+    .time-digits {
+      @apply text-7xl font-bold tracking-tighter text-white tabular-nums;
+      filter: drop-shadow(0 0 20px rgba(255,255,255,0.1));
     }
 
-    .avatar-btn {
-      position: relative;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-      margin-top: 8px;
+    .time-period {
+      @apply text-xl font-bold text-indigo-400/80 ml-2 uppercase tracking-widest;
     }
 
-    .avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, rgba(108,99,255,0.3), rgba(108,99,255,0.1));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 2px solid rgba(108,99,255,0.35);
+    .clock-status {
+      @apply mt-4 text-[10px] font-black tracking-[0.3em] text-slate-500 uppercase;
     }
 
-    .avatar .material-symbols-rounded {
-      color: #8b84ff;
-      font-size: 22px;
-    }
-
-    .avatar-ring {
-      position: absolute;
-      inset: -3px;
-      border-radius: 50%;
-      border: 1.5px solid rgba(108,99,255,0.3);
-      animation: pulse-ring 2.5s ease-in-out infinite;
-    }
-
-    @keyframes pulse-ring {
-      0%, 100% { transform: scale(1); opacity: 0.6; }
-      50% { transform: scale(1.08); opacity: 0.2; }
-    }
-
-    /* Section */
-    .section {
-      padding: 0 16px 20px;
-    }
-
-    .section-header {
-      font-size: 15px;
-      font-weight: 600;
-      color: #f1f1f3;
-      margin: 0 0 12px;
-    }
-
-    .section-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .view-all-btn {
-      font-size: 13px;
-      color: #6c63ff;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    /* Sleep Status Card */
-    .sleep-status-card {
-      border-radius: 20px;
-      padding: 20px;
-      border: 1px solid rgba(255,255,255,0.07);
-      background: #1a1a1f;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s ease;
-    }
-
-    .sleep-status-card__bg {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at top right, rgba(108,99,255,0.08) 0%, transparent 60%);
-      transition: all 0.3s ease;
-    }
-
-    .sleep-status-card.sleeping .sleep-status-card__bg {
-      background: radial-gradient(circle at top right, rgba(16,185,129,0.08) 0%, transparent 60%);
-    }
-
-    .sleep-status-card.sleeping {
-      border-color: rgba(16,185,129,0.2);
-    }
-
-    .sleep-status-card__content {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 18px;
-      position: relative;
-    }
-
-    .sleep-status-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 14px;
-      background: rgba(108,99,255,0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.3s ease;
-    }
-
-    .sleep-status-card.sleeping .sleep-status-icon {
-      background: rgba(16,185,129,0.15);
-    }
-
-    .status-icon {
-      font-size: 26px;
-      color: #8b84ff;
-      font-variation-settings: 'FILL' 1;
-      transition: color 0.3s ease;
-    }
-
-    .sleep-status-card.sleeping .status-icon {
-      color: #34d399;
-    }
-
-    .sleep-status-label {
-      font-size: 16px;
-      font-weight: 600;
-      color: #f1f1f3;
-      margin: 0 0 2px;
-    }
-
-    .sleep-status-sublabel {
-      font-size: 12px;
-      color: #9ca3af;
-      margin: 0;
-    }
-
-    .sleep-btn, .wakeup-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      padding: 13px 20px;
-      border-radius: 14px;
-      border: none;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      position: relative;
-    }
-
-    .sleep-btn {
-      background: linear-gradient(135deg, #6c63ff, #5249e5);
-      color: white;
-      box-shadow: 0 4px 16px rgba(108,99,255,0.35);
-    }
-    .sleep-btn:hover { box-shadow: 0 6px 24px rgba(108,99,255,0.5); transform: translateY(-1px); }
-    .sleep-btn:active { transform: translateY(0); }
-
-    .wakeup-btn {
+    /* Master Button Overrides */
+    .btn-wakeup {
       background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      box-shadow: 0 4px 16px rgba(16,185,129,0.35);
-    }
-    .wakeup-btn:hover { box-shadow: 0 6px 24px rgba(16,185,129,0.5); transform: translateY(-1px); }
-    .wakeup-btn:active { transform: translateY(0); }
-
-    /* Stats grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      box-shadow: 0 0 40px var(--color-success-glow), 0 10px 30px rgba(0,0,0,0.4);
+      &::after { @apply animate-pulse; background: #10b981; }
     }
 
-    .stat-card {
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .animate-fade-in {
+      animation: fadeIn 1s ease-out forwards;
     }
 
-    .stat-card__icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .stat-card__icon .material-symbols-rounded {
-      font-size: 20px;
-      font-variation-settings: 'FILL' 1;
-    }
-
-    .stat-card__value {
-      font-size: 22px;
-      font-weight: 700;
-      color: #f1f1f3;
-    }
-
-    .stat-card__label {
-      font-size: 11px;
-      color: #9ca3af;
-      font-weight: 500;
-    }
-
-    /* Goal card */
-    .goal-card {
-      padding: 18px;
-    }
-
-    .goal-card__header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-
-    .goal-icon {
-      width: 40px;
-      height: 40px;
-      border-radius: 12px;
-      background: rgba(245,158,11,0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .goal-icon .material-symbols-rounded {
-      font-size: 22px;
-      color: #fbbf24;
-      font-variation-settings: 'FILL' 1;
-    }
-
-    .goal-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #f1f1f3;
-    }
-
-    .goal-subtitle {
-      font-size: 12px;
-      color: #9ca3af;
-    }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 10px;
-      border-radius: 100px;
-      font-size: 11px;
-      font-weight: 500;
-    }
-
-    .badge-accent {
-      background: rgba(108,99,255,0.15);
-      color: #8b84ff;
-      border: 1px solid rgba(108,99,255,0.25);
-      margin-left: auto;
-    }
-
-    .badge-success {
-      background: rgba(16,185,129,0.15);
-      color: #34d399;
-      border: 1px solid rgba(16,185,129,0.25);
-    }
-
-    .goal-progress-bar {
-      height: 6px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 3px;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-
-    .goal-progress-bar__fill {
-      height: 100%;
-      background: linear-gradient(90deg, #6c63ff, #8b84ff);
-      border-radius: 3px;
-      transition: width 0.5s ease;
-    }
-
-    .goal-progress-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: #6b7280;
-    }
-
-    /* Session cards */
-    .session-card {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      margin-bottom: 8px;
-      border-radius: 16px;
-      background: #1a1a1f;
-      border: 1px solid rgba(255,255,255,0.06);
-      transition: all 0.2s ease;
-    }
-
-    .session-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 12px;
-      background: rgba(108,99,255,0.12);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .session-icon .material-symbols-rounded {
-      font-size: 20px;
-      color: #8b84ff;
-      font-variation-settings: 'FILL' 1;
-    }
-
-    .session-info { flex: 1; }
-
-    .session-date {
-      font-size: 13px;
-      font-weight: 600;
-      color: #f1f1f3;
-    }
-
-    .session-times {
-      font-size: 11px;
-      color: #9ca3af;
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 36px 20px;
-    }
-
-    .empty-state__icon {
-      font-size: 48px;
-      color: rgba(108,99,255,0.3);
-      font-variation-settings: 'FILL' 1;
-      margin-bottom: 12px;
-      display: block;
-    }
-
-    .empty-state__text {
-      font-size: 15px;
-      font-weight: 600;
-      color: #9ca3af;
-      margin: 0 0 4px;
-    }
-
-    .empty-state__sub {
-      font-size: 13px;
-      color: #6b7280;
-      margin: 0;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   `],
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit, OnDestroy {
   readonly authService: AuthService = inject(AuthService);
   readonly sleepService: SleepService = inject(SleepService);
+  
+  private _currentTime = signal<Date>(new Date());
+  readonly currentTime = this._currentTime.asReadonly();
+  
+  private timer?: any;
 
-  readonly today = new Date();
+  ngOnInit() {
+    this.timer = setInterval(() => {
+      this._currentTime.set(new Date());
+    }, 1000);
+  }
+
+  ngOnDestroy() {
+    if (this.timer) clearInterval(this.timer);
+  }
 
   readonly greeting = computed(() => {
-    const hour = new Date().getHours();
+    const hour = this.currentTime().getHours();
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     if (hour < 21) return 'Good Evening';
@@ -559,55 +190,14 @@ export class DashboardComponent {
 
   readonly userName = computed(() => {
     const user = this.authService.currentUser();
-    return user?.displayName?.split(' ')[0] ?? 'Traveler';
+    return user?.displayName?.split(' ')[0] ?? 'Explorer';
   });
 
-  readonly statsCards = computed(() => {
-    const stats = this.sleepService.stats();
-    return [
-      {
-        icon: 'show_chart',
-        label: 'Avg Sleep',
-        value: this.formatDuration(stats.averageDurationMinutes),
-        iconBg: 'rgba(108,99,255,0.12)',
-        iconColor: '#8b84ff',
-      },
-      {
-        icon: 'local_fire_department',
-        label: 'Day Streak',
-        value: `${stats.streak}d`,
-        iconBg: 'rgba(245,158,11,0.12)',
-        iconColor: '#fbbf24',
-      },
-      {
-        icon: 'alarm',
-        label: 'Sessions',
-        value: `${stats.totalSessions}`,
-        iconBg: 'rgba(16,185,129,0.12)',
-        iconColor: '#34d399',
-      },
-      {
-        icon: 'hotel',
-        label: 'Best Sleep',
-        value: this.formatDuration(stats.bestDurationMinutes),
-        iconBg: 'rgba(239,68,68,0.10)',
-        iconColor: '#f87171',
-      },
-    ];
-  });
-
-  startSleep(): void {
-    this.sleepService.startSleep();
-  }
-
-  logWakeup(): void {
-    this.sleepService.stopSleep();
-  }
-
-  formatDuration(minutes: number): string {
-    if (!minutes) return '—';
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  toggleSleep() {
+    if (this.sleepService.isSleeping()) {
+      this.sleepService.stopSleep();
+    } else {
+      this.sleepService.startSleep();
+    }
   }
 }

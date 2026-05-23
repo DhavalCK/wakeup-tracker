@@ -1,11 +1,10 @@
-import { Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { Component } from '@angular/core';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 interface NavItem {
   label: string;
   route: string;
   icon: string;
-  activeIcon: string;
 }
 
 @Component({
@@ -13,144 +12,88 @@ interface NavItem {
   standalone: true,
   imports: [RouterLink, RouterLinkActive],
   template: `
-    <nav class="bottom-nav">
-      <div class="bottom-nav__inner">
-        @for (item of navItems; track item.route) {
-          <a
-            [routerLink]="item.route"
-            routerLinkActive="active"
-            class="nav-item"
-            [attr.aria-label]="item.label"
-          >
-            <div class="nav-item__icon-wrap">
-              <span class="material-symbols-rounded nav-item__icon">{{ item.icon }}</span>
-              <div class="nav-item__glow"></div>
-            </div>
-            <span class="nav-item__label">{{ item.label }}</span>
-          </a>
-        }
-      </div>
-    </nav>
+    <div class="nav-wrapper">
+      <nav class="nav-container glass-premium">
+        <div class="nav-items">
+          @for (item of navItems; track item.route) {
+            <a
+              [routerLink]="item.route"
+              routerLinkActive="active"
+              class="nav-item-link"
+              [attr.aria-label]="item.label"
+            >
+              <div class="icon-box">
+                <span class="material-symbols-rounded">{{ item.icon }}</span>
+              </div>
+              <span class="nav-label">{{ item.label }}</span>
+              <div class="active-dot"></div>
+            </a>
+          }
+        </div>
+      </nav>
+    </div>
   `,
   styles: [`
-    .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 100;
-      background: rgba(20, 20, 23, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255, 255, 255, 0.07);
-      box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.5);
+    .nav-wrapper {
+      @apply fixed bottom-6 left-0 right-0 z-50 flex justify-center px-6;
       padding-bottom: env(safe-area-inset-bottom, 0px);
     }
 
-    .bottom-nav__inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      height: 68px;
-      max-width: 480px;
-      margin: 0 auto;
-      padding: 0 8px;
+    .nav-container {
+      @apply w-full max-w-sm rounded-[32px] px-2 py-2 shadow-[0_20px_50px_rgba(0,0,0,0.5)];
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
 
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      flex: 1;
-      height: 100%;
-      padding: 8px 4px;
+    .nav-items {
+      @apply flex items-center justify-around h-14;
+    }
+
+    .nav-item-link {
+      @apply relative flex flex-col items-center justify-center flex-1 h-full transition-all duration-300 gap-1;
+      color: #94a3b8;
       text-decoration: none;
-      color: #6b7280;
-      transition: color 0.2s ease;
-      position: relative;
       -webkit-tap-highlight-color: transparent;
+      
+      &:hover .icon-box { @apply scale-110; color: #cbd5e1; }
     }
 
-    .nav-item__icon-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 32px;
-      border-radius: 10px;
-      transition: background 0.2s ease;
+    .icon-box {
+      @apply flex items-center justify-center transition-all duration-300;
+      span {
+        font-size: 26px;
+        font-variation-settings: 'FILL' 0, 'wght' 300;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
     }
 
-    .nav-item__icon {
-      font-size: 22px;
-      font-variation-settings: 'FILL' 0, 'wght' 400;
-      transition: all 0.2s ease;
+    .nav-label {
+      @apply text-[10px] font-bold uppercase tracking-widest opacity-60 transition-opacity duration-300;
     }
 
-    .nav-item__glow {
-      position: absolute;
-      inset: 0;
-      border-radius: 10px;
-      background: rgba(108, 99, 255, 0.2);
-      opacity: 0;
-      transition: opacity 0.2s ease;
+    .active-dot {
+      @apply absolute -bottom-1 w-1 h-1 rounded-full bg-indigo-500 opacity-0 transition-all duration-300 scale-0;
     }
 
-    .nav-item__label {
-      font-size: 10px;
-      font-weight: 500;
-      letter-spacing: 0.02em;
-      transition: color 0.2s ease;
-    }
+    /* Active State */
+    .nav-item-link.active {
+      @apply text-white;
+      
+      .icon-box span {
+        @apply text-indigo-400;
+        font-variation-settings: 'FILL' 1, 'wght' 400;
+        transform: translateY(-2px);
+        filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+      }
 
-    .nav-item.active {
-      color: #6c63ff;
-    }
-
-    .nav-item.active .nav-item__icon-wrap {
-      background: rgba(108, 99, 255, 0.12);
-    }
-
-    .nav-item.active .nav-item__icon {
-      font-variation-settings: 'FILL' 1, 'wght' 500;
-      filter: drop-shadow(0 0 6px rgba(108, 99, 255, 0.6));
-    }
-
-    .nav-item.active .nav-item__glow {
-      opacity: 1;
-    }
-
-    .nav-item.active .nav-item__label {
-      font-weight: 600;
-    }
-
-    .nav-item:active .nav-item__icon-wrap {
-      transform: scale(0.92);
+      .nav-label { @apply opacity-100; }
+      .active-dot { @apply opacity-100 scale-100 -translate-y-1; }
     }
   `],
 })
 export class BottomNavComponent {
   readonly navItems: NavItem[] = [
-    {
-      label: 'Dashboard',
-      route: '/dashboard',
-      icon: 'space_dashboard',
-      activeIcon: 'space_dashboard',
-    },
-    {
-      label: 'History',
-      route: '/history',
-      icon: 'history',
-      activeIcon: 'history',
-    },
-    {
-      label: 'Profile',
-      route: '/profile',
-      icon: 'person',
-      activeIcon: 'person',
-    },
+    { label: 'Feed', route: '/dashboard', icon: 'auto_awesome' },
+    { label: 'Journal', route: '/history', icon: 'data_saver_on' },
+    { label: 'Self', route: '/profile', icon: 'person_outline' },
   ];
 }
