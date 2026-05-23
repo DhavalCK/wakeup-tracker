@@ -2,11 +2,12 @@ import { Component, inject, computed, signal, OnInit, OnDestroy } from '@angular
 import { DatePipe } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { SleepService } from '../../core/services/sleep.service';
+import { ProfileMenuComponent } from '../../shared/components/profile-menu/profile-menu.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, ProfileMenuComponent],
   template: `
     <div class="page-container bg-radial-ethereal">
       <div class="content-scroll">
@@ -22,9 +23,7 @@ import { SleepService } from '../../core/services/sleep.service';
               </span>
             </h1>
           </div>
-          <div class="profile-frame">
-             <span class="material-symbols-rounded text-indigo-400">person</span>
-          </div>
+          <app-profile-menu />
         </header>
 
         <!-- Live Clock & Focal Point -->
