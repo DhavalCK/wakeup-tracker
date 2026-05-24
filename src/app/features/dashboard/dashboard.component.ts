@@ -59,7 +59,7 @@ import { ProfileMenuComponent } from '../../shared/components/profile-menu/profi
 
         </div>
 
-        <!-- Dashboard Intelligence Section -->
+          <!-- Dashboard Intelligence Section -->
         <section class="mt-16 space-y-6">
           <div class="flex items-end justify-between">
             <h2 class="text-lg font-bold tracking-tight">Today's Pulse</h2>
@@ -73,7 +73,7 @@ import { ProfileMenuComponent } from '../../shared/components/profile-menu/profi
                <span class="material-symbols-rounded text-indigo-400/60 mb-4">analytics</span>
                <div>
                  <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Avg Depth</p>
-                 <h3 class="text-xl font-bold">8h 12m</h3>
+                 <h3 class="text-xl font-bold">{{ formatDuration(sleepService.stats().averageDurationMinutes) }}</h3>
                </div>
             </div>
 
@@ -82,27 +82,29 @@ import { ProfileMenuComponent } from '../../shared/components/profile-menu/profi
                <div class="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition-all"></div>
                <span class="material-symbols-rounded text-emerald-400/60 mb-4">monitoring</span>
                <div>
-                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Recovery</p>
-                 <h3 class="text-xl font-bold">92%</h3>
+                 <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Sessions</p>
+                 <h3 class="text-xl font-bold">{{ sleepService.stats().totalSessions }}</h3>
                </div>
             </div>
           </div>
 
           <!-- Timeline Summary Card -->
-          <div class="glass-card mt-4 p-5 flex items-center gap-6">
-            <div class="flex-1 space-y-3">
-              <h4 class="text-sm font-bold text-slate-200">Session in progress</h4>
-              <div class="flex items-center gap-2">
-                <div class="w-full bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-indigo-500 h-full w-2/3 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
+          @if (sleepService.isSleeping()) {
+            <div class="glass-card mt-4 p-5 flex items-center gap-6 animate-fade-in">
+              <div class="flex-1 space-y-3">
+                <h4 class="text-sm font-bold text-slate-200">Session in progress ({{ currentSessionDuration() }})</h4>
+                <div class="flex items-center gap-2">
+                  <div class="w-full bg-slate-800/50 h-1.5 rounded-full overflow-hidden">
+                    <div class="bg-indigo-500 h-full shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-1000" [style.width.%]="sessionProgress()"></div>
+                  </div>
+                  <span class="text-[10px] font-bold text-slate-500">{{ sessionProgress() }}%</span>
                 </div>
-                <span class="text-[10px] font-bold text-slate-500">62%</span>
+              </div>
+              <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                 <span class="material-symbols-rounded">more_time</span>
               </div>
             </div>
-            <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-               <span class="material-symbols-rounded">more_time</span>
-            </div>
-          </div>
+          }
         </section>
 
       </div>
@@ -192,11 +194,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return user?.displayName?.split(' ')[0] ?? 'Explorer';
   });
 
-  toggleSleep() {
+  readonly currentSessionDuration = computed(() => {
+    if (!this.sleepService.isSleeping()) return '0m';
+    const start = this.sleepService.sleepStartTime();
+    if (!start) return '0m';
+    const now = this.currentTime();
+    const diffMs = now.getTime() - start.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    return this.formatDuration(mins);
+  });
+
+  readonly sessionProgress = computed(() => {
+    if (!this.sleepService.isSleeping()) return 0;
+    const start = this.sleepService.sleepStartTime();
+    if (!start) return 0;
+    const now = this.currentTime();
+    const mins = Math.floor((now.getTime() - start.getTime()) / 60000);
+    return Math.min(100, Math.floor((mins / 480) * 100)); // Assuming 8 hours (480 mins) is 100%
+  });
+
+  formatDuration(minutes: number): string {
+    if (!minutes) return '0h 0m';
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  async toggleSleep() {
     if (this.sleepService.isSleeping()) {
-      this.sleepService.stopSleep();
+      await this.sleepService.stopSleep();
     } else {
-      this.sleepService.startSleep();
+      await this.sleepService.startSleep();
     }
   }
 }

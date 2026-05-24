@@ -1,35 +1,72 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { SleepEntry, SleepStats } from '../models/sleep-entry.model';
+import { AuthService } from './auth.service';
+import { Firestore, collection, query, orderBy, collectionData, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from '@angular/fire/firestore';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { switchMap, map, of, Observable, catchError } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
 })
 export class SleepService {
-  // Signal-based state — will be wired to Firestore in the next phase
-  private _entries = signal<SleepEntry[]>([]);
-  private _loading = signal<boolean>(false);
-  private _isSleeping = signal<boolean>(false);
-  private _sleepStartTime = signal<Date | null>(null);
+  private readonly authService = inject(AuthService);
+  private readonly firestore = inject(Firestore);
 
-  // Public readonly signals
-  readonly entries = this._entries.asReadonly();
+  private readonly _loading = signal<boolean>(false);
+
+  // Derived Firestore Query
+  private readonly entriesQuery = computed(() => {
+    const user = this.authService.currentUser();
+    if (!user) return null;
+    const entriesRef = collection(this.firestore, `users/${user.uid}/sleep_entries`);
+    return query(entriesRef, orderBy('sleepTime', 'desc'));
+  });
+
+  // Reactive Firestore Stream
+  private readonly entries$ = toObservable(this.entriesQuery).pipe(
+    switchMap(q => {
+      if (!q) return of([]);
+      return collectionData(q, { idField: 'id' }).pipe(
+        catchError(err => {
+          console.error("Error fetching sleep data", err);
+          return of([]);
+        })
+      ) as Observable<any[]>;
+    }),
+    map(entries => entries.map(e => ({
+      ...e,
+      sleepTime: e.sleepTime?.toDate ? e.sleepTime.toDate() : new Date(e.sleepTime),
+      wakeupTime: e.wakeupTime ? (e.wakeupTime.toDate ? e.wakeupTime.toDate() : new Date(e.wakeupTime)) : null,
+      createdAt: e.createdAt?.toDate ? e.createdAt.toDate() : new Date(e.createdAt)
+    }) as SleepEntry))
+  );
+
+  // State Signals
+  readonly entries = toSignal(this.entries$, { initialValue: [] });
   readonly loading = this._loading.asReadonly();
-  readonly isSleeping = this._isSleeping.asReadonly();
-  readonly sleepStartTime = this._sleepStartTime.asReadonly();
+
+  // Active Sleep Session derived from entries
+  readonly activeEntry = computed(() => {
+    const all = this.entries();
+    return all.find(e => !e.wakeupTime) || null;
+  });
+
+  readonly isSleeping = computed(() => !!this.activeEntry());
+  readonly sleepStartTime = computed(() => this.activeEntry()?.sleepTime || null);
 
   // Computed: today's stats
   readonly todayStats = computed(() => {
     const today = new Date();
-    const todayEntries = this._entries().filter((e) => {
+    return this.entries().filter((e) => {
+      if (!e.wakeupTime) return false;
       const d = new Date(e.wakeupTime);
       return d.toDateString() === today.toDateString();
     });
-    return todayEntries;
   });
 
   readonly stats = computed<SleepStats>(() => {
-    const all = this._entries();
-    if (!all.length) {
+    const allCompleted = this.entries().filter(e => e.wakeupTime && e.durationMinutes);
+    if (!allCompleted.length) {
       return {
         totalSessions: 0,
         averageDurationMinutes: 0,
@@ -38,28 +75,60 @@ export class SleepService {
         streak: 0,
       };
     }
-    const total = all.reduce((sum, e) => sum + e.durationMinutes, 0);
-    const best = Math.max(...all.map((e) => e.durationMinutes));
+    const total = allCompleted.reduce((sum, e) => sum + (e.durationMinutes || 0), 0);
+    const best = Math.max(...allCompleted.map((e) => e.durationMinutes || 0));
     return {
-      totalSessions: all.length,
-      averageDurationMinutes: Math.round(total / all.length),
+      totalSessions: allCompleted.length,
+      averageDurationMinutes: Math.round(total / allCompleted.length),
       bestDurationMinutes: best,
       averageQuality: 0,
-      streak: 0,
+      streak: 0, // Placeholder mapping to true streak logic if needed
     };
   });
 
-  // Placeholder: start sleep timer
-  startSleep(): void {
-    this._isSleeping.set(true);
-    this._sleepStartTime.set(new Date());
-    console.log('[SleepService] sleep started at', this._sleepStartTime());
+  async startSleep(): Promise<void> {
+    const user = this.authService.currentUser();
+    if (!user) return;
+    
+    this._loading.set(true);
+    try {
+      const entriesRef = collection(this.firestore, `users/${user.uid}/sleep_entries`);
+      await addDoc(entriesRef, {
+        userId: user.uid,
+        sleepTime: serverTimestamp(),
+        wakeupTime: null,
+        durationMinutes: null,
+        createdAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error('Failed to start sleep', err);
+    } finally {
+      this._loading.set(false);
+    }
   }
 
-  // Placeholder: stop sleep timer / log wakeup
-  stopSleep(): void {
-    this._isSleeping.set(false);
-    this._sleepStartTime.set(null);
-    console.log('[SleepService] wakeup logged — Firebase not yet wired');
+  async stopSleep(): Promise<void> {
+    const user = this.authService.currentUser();
+    const current = this.activeEntry();
+    
+    if (!user || !current || !current.id) return;
+
+    this._loading.set(true);
+    try {
+      const entryRef = doc(this.firestore, `users/${user.uid}/sleep_entries/${current.id}`);
+      
+      const now = new Date();
+      const diffMs = now.getTime() - current.sleepTime.getTime();
+      const durationMinutes = Math.round(diffMs / 60000);
+
+      await updateDoc(entryRef, {
+        wakeupTime: serverTimestamp(),
+        durationMinutes
+      });
+    } catch (err) {
+      console.error('Failed to stop sleep', err);
+    } finally {
+      this._loading.set(false);
+    }
   }
 }

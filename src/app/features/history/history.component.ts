@@ -77,7 +77,7 @@ type FilterPeriod = 'week' | 'month' | 'all';
                     </div>
                   </div>
                   <div class="text-right">
-                    <h4 class="font-black text-lg">{{ formatDuration(entry.durationMinutes) }}</h4>
+                    <h4 class="font-black text-lg">{{ formatDuration(entry.durationMinutes || 0) }}</h4>
                     <p class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest">Optimal</p>
                   </div>
                </div>

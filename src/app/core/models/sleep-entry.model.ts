@@ -1,12 +1,12 @@
 export interface SleepEntry {
   id?: string;
   userId: string;
-  sleepTime: Date;
-  wakeupTime: Date;
-  durationMinutes: number;
+  sleepTime: Date | any;
+  wakeupTime?: Date | any | null;
+  durationMinutes?: number | null;
   quality?: 'poor' | 'fair' | 'good' | 'excellent';
   notes?: string;
-  createdAt: Date;
+  createdAt?: Date | any;
 }
 
 export interface SleepStats {
